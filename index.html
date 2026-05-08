@@ -24,18 +24,20 @@ canvas{border:3px solid #8B4513;border-radius:5px}
 <script>
 let c=document.getElementById("c"),ctx=c.getContext("2d");
 c.width=400;c.height=550;
-let player={x:180,y:70,w:30,h:30,vy:0,onGround:false};
+let player={x:185,y:500,w:30,h:30,vy:0,onGround:false};
 let platforms=[],score=0,gameOver=false,highScore=0;
-let keys={},spawnTimer=0;
+let keys={},spawnTimer=0,basePlatform=null;
 
-platforms.push({x:150,y:500,w:100,h:12});
+// Стартовая платформа
+basePlatform={x:150,y:520,w:100,h:12};
+platforms.push(basePlatform);
 
 document.addEventListener("keydown",e=>{keys[e.key]=1;e.preventDefault()});
 document.addEventListener("keyup",e=>{keys[e.key]=0});
 
 function restart(){
-    player.x=180;player.y=70;player.vy=0;score=0;gameOver=false;
-    platforms=[{x:150,y:500,w:100,h:12}];
+    player.x=185;player.y=500;player.vy=0;score=0;gameOver=false;
+    platforms=[{x:150,y:520,w:100,h:12}];
     document.getElementById("rst").style.display="none";
 }
 
@@ -57,14 +59,20 @@ function loop(){
         if(player.x<-20)player.x=c.width;
         if(player.x>c.width+20)player.x=0;
         if(player.y>c.height+30)gameOver=true;
-        let h=Math.floor((500-player.y)/10);
+        // Счёт
+        let h=Math.floor((520-player.y)/10);
         if(h>score)score=h;
+        // Спавн платформ с двух сторон
         spawnTimer++;
-        if(spawnTimer>30){
+        if(spawnTimer>25){
             spawnTimer=0;
-            platforms.push({x:Math.random()*(c.width-80),y:-20,w:50+Math.random()*90,h:12});
+            let side=Math.random()<0.5?"left":"right";
+            let px=side==="left"?Math.random()*100:300+Math.random()*100;
+            platforms.push({x:px,y:-20,w:50+Math.random()*90,h:12});
         }
-        for(let p of platforms)p.y+=2.5;
+        // Двигаем всё вниз
+        for(let p of platforms)p.y+=3;
+        // Удаляем ушедшие
         platforms=platforms.filter(p=>p.y<c.height+50);
     }
     ctx.fillStyle="#2a1a00";ctx.fillRect(0,0,c.width,c.height);
