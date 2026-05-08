@@ -8,8 +8,8 @@
 *{margin:0;padding:0;box-sizing:border-box}
 body{background:#1a0a00;display:flex;flex-direction:column;align-items:center;height:100vh;overflow:hidden}
 canvas{border:3px solid #8B4513;border-radius:5px}
-#btns{display:flex;gap:10px;margin-top:5px}
-#btns button{width:60px;height:60px;font-size:24px;background:#8B4513;color:#FFD700;border:2px solid #FFD700;border-radius:10px;touch-action:manipulation}
+#btns{display:flex;gap:8px;margin-top:5px}
+#btns button{width:60px;height:60px;font-size:22px;background:#8B4513;color:#FFD700;border:2px solid #FFD700;border-radius:10px;touch-action:manipulation}
 </style>
 </head>
 <body>
@@ -21,52 +21,81 @@ canvas{border:3px solid #8B4513;border-radius:5px}
 </div>
 <script>
 let c=document.getElementById("c"),ctx=c.getContext("2d");
-c.width=400;c.height=500;
-let player={x:180,y:400,w:30,h:30,vy:0,onGround:false};
-let platforms=[],score=0,gameOver=false,highScore=0;
-let keys={};
+c.width=400;c.height=550;
+let player={x:180,y:70,w:30,h:30,vy:0,onGround:false};
+let platforms=[],fallingPlatforms=[],score=0,gameOver=false,highScore=0;
+let keys={},spawnTimer=0,jumpHeld=false;
 
-platforms.push({x:150,y:450,w:100,h:15});
-for(let i=0;i<10;i++){
-    platforms.push({x:Math.random()*330,y:450-i*50-Math.random()*20,w:40+Math.random()*80,h:15});
-}
-platforms[0]={x:150,y:450,w:100,h:15};
+// Стартовая платформа
+platforms.push({x:150,y:500,w:100,h:12});
 
-document.addEventListener("keydown",e=>{keys[e.key]=1;e.preventDefault()});
-document.addEventListener("keyup",e=>{keys[e.key]=0});
+document.addEventListener("keydown",e=>{keys[e.key]=1;if(e.key==" ")jumpHeld=true;e.preventDefault()});
+document.addEventListener("keyup",e=>{keys[e.key]=0;if(e.key==" ")jumpHeld=false});
 
 function loop(){
     if(!gameOver){
-        player.vy+=0.6;
+        // Гравитация
+        player.vy+=0.5;
         player.y+=player.vy;
         player.onGround=false;
+        // Столкновение с платформами
         for(let p of platforms){
             if(player.x<p.x+p.w&&player.x+player.w>p.x&&
-               player.y+player.h>p.y&&player.y+player.h<p.y+p.h+10&&player.vy>0){
+               player.y+player.h>p.y&&player.y+player.h<p.y+p.h+8&&player.vy>0){
                 player.y=p.y-player.h;
                 player.vy=0;
                 player.onGround=true;
             }
         }
-        if(keys[" "]&&player.onGround){player.vy=-10;player.onGround=false;}
-        if(keys["a"])player.x-=4;if(keys["d"])player.x+=4;
-        if(player.x<0)player.x=0;if(player.x>c.width-player.w)player.x=c.width-player.w;
-        if(player.y<c.height/2){
-            let diff=c.height/2-player.y;
-            player.y=c.height/2;
-            for(let p of platforms)p.y+=diff;
-            score+=Math.floor(diff);
+        // Прыжок
+        if((keys[" "]||jumpHeld)&&player.onGround){player.vy=-9;player.onGround=false;}
+        // Движение
+        if(keys["a"])player.x-=5;if(keys["d"])player.x+=5;
+        // Телепорт слева-направо
+        if(player.x<-20)player.x=c.width;
+        if(player.x>c.width+20)player.x=0;
+        // Смерть при падении
+        if(player.y>c.height+30)gameOver=true;
+        // Счёт = высота в пикселях
+        let h=Math.floor((500-player.y)/10);
+        if(h>score)score=h;
+        // Спавн новых платформ сверху
+        spawnTimer++;
+        if(spawnTimer>40){
+            spawnTimer=0;
+            let px=Math.random()*(c.width-80);
+            let py=-20;
+            platforms.push({x:px,y:py,w:60+Math.random()*80,h:12});
+            // Иногда падающая платформа
+            if(Math.random()<0.25)fallingPlatforms.push({x:px,y:py,w:60+Math.random()*80,h:12});
         }
-        if(player.y>c.height+50)gameOver=true;
-        for(let p of platforms){
-            if(p.y>c.height+100){p.y=-20;p.x=Math.random()*330;}
+        // Двигаем платформы вниз (камера)
+        for(let p of platforms)p.y+=2;
+        for(let p of fallingPlatforms)p.y+=2;
+        // Удаляем ушедшие
+        platforms=platforms.filter(p=>p.y<c.height+50);
+        fallingPlatforms=fallingPlatforms.filter(p=>p.y<c.height+50);
+        // Падающие ломаются при касании
+        for(let p of fallingPlatforms){
+            if(player.x<p.x+p.w&&player.x+player.w>p.x&&
+               player.y+player.h>p.y&&player.y+player.h<p.y+p.h+8&&player.vy>0){
+                fallingPlatforms.splice(fallingPlatforms.indexOf(p),1);
+                player.vy=-6;
+            }
         }
     }
+    // Рисование
     ctx.fillStyle="#2a1a00";ctx.fillRect(0,0,c.width,c.height);
+    // Обычные платформы
     ctx.fillStyle="#8B4513";
     for(let p of platforms)ctx.fillRect(p.x,p.y,p.w,p.h);
+    // Падающие платформы
+    ctx.fillStyle="#FF6347";
+    for(let p of fallingPlatforms)ctx.fillRect(p.x,p.y,p.w,p.h);
+    // Игрок
     ctx.fillStyle="#FFD700";ctx.fillRect(player.x,player.y,player.w,player.h);
     ctx.fillStyle="#000";ctx.fillRect(player.x+5,player.y+8,8,8);ctx.fillRect(player.x+17,player.y+8,8,8);
+    // UI
     ctx.fillStyle="#fff";ctx.font="18px sans-serif";
     ctx.fillText("Счёт: "+score,10,25);
     ctx.fillText("Рекорд: "+highScore,10,50);
@@ -74,11 +103,10 @@ function loop(){
         if(score>highScore)highScore=score;
         ctx.fillStyle="#f00";ctx.font="28px sans-serif";
         ctx.fillText("GAME OVER",80,250);
-        ctx.fillStyle="#fff";ctx.font="18px sans-serif";
-        ctx.fillText("Нажми R",120,280);
-        if(keys["r"]){
-            player.y=400;player.vy=0;score=0;gameOver=false;
-            platforms.forEach((p,i)=>{p.y=450-i*50;});
+        ctx.fillText("Тапни чтобы начать",60,290);
+        if(keys[" "]||keys["r"]){
+            player.x=180;player.y=70;player.vy=0;score=0;gameOver=false;
+            platforms=[{x:150,y:500,w:100,h:12}];fallingPlatforms=[];
         }
     }
     requestAnimationFrame(loop);
