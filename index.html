@@ -23,13 +23,14 @@ let ctx=c.getContext("2d");
 let W=400,H=550;
 let player={x:185,y:500,w:26,h:30,vy:0};
 let platforms=[],score=0,high=0,over=false;
-let left=0,right=0,jump=0,camY=0;
+let left=0,right=0,jump=0,camY=0,jumped=false;
 
 // Стартовые платформы
-for(let i=0;i<15;i++){
+platforms.push({x:160,y:515,w:80,h:10});
+for(let i=1;i<15;i++){
     platforms.push({
         x:Math.random()*320+20,
-        y:520-i*40,
+        y:515-i*42,
         w:50+Math.random()*70,
         h:10
     });
@@ -44,77 +45,64 @@ document.onkeydown=e=>{
 document.onkeyup=e=>{
     if(e.key=="a"||e.key=="A")left=0;
     if(e.key=="d"||e.key=="D")right=0;
-    if(e.key==" "||e.key=="Space")jump=0;
+    if(e.key==" "||e.key=="Space"){jump=0;jumped=false;}
 };
 
 function update(){
     if(over)return;
-    // Гравитация
     player.vy+=0.5;
     player.y+=player.vy;
-    // Прыжок
+    let onPlatform=false;
     for(let p of platforms){
         if(player.vy>0&&player.x<p.x+p.w&&player.x+player.w>p.x&&
            player.y+player.h>p.y&&player.y+player.h<p.y+15){
-            player.vy=-9;
             player.y=p.y-player.h;
+            player.vy=-9.5;
+            onPlatform=true;
             break;
         }
     }
-    // Управление
+    if(!onPlatform)player.onGround=false;
     if(left)player.x-=5;
     if(right)player.x+=5;
     if(player.x<-20)player.x=W;
     if(player.x>W+20)player.x=0;
-    // Камера
     if(player.y<350){
         let d=350-player.y;
         player.y=350;
         platforms.forEach(p=>p.y+=d);
         camY+=d;
     }
-    // Смерть
     if(player.y>H+60)over=true;
-    // Счёт
     score=Math.floor(camY/5);
     if(score>high)high=score;
-    // Новые платформы сверху
     let minY=Math.min(...platforms.map(p=>p.y));
     while(minY>-40){
-        platforms.push({x:Math.random()*300+30,y:minY-35-Math.random()*25,w:50+Math.random()*70,h:10});
-        minY=minY-40;
+        let px=Math.random()*300+30;
+        let py=minY-38-Math.random()*22;
+        platforms.push({x:px,y:py,w:50+Math.random()*70,h:10});
+        minY=py;
     }
-    // Удалить старые
     platforms=platforms.filter(p=>p.y<H+80);
 }
 
 function draw(){
-    ctx.fillStyle="#2a1a00";
-    ctx.fillRect(0,0,W,H);
+    ctx.fillStyle="#2a1a00";ctx.fillRect(0,0,W,H);
     ctx.fillStyle="#8B4513";
     for(let p of platforms)ctx.fillRect(p.x,p.y,p.w,p.h);
-    ctx.fillStyle="#FFD700";
-    ctx.fillRect(player.x,player.y,player.w,player.h);
-    ctx.fillStyle="#000";
-    ctx.fillRect(player.x+4,player.y+6,8,8);
-    ctx.fillRect(player.x+14,player.y+6,8,8);
-    ctx.fillStyle="#fff";
-    ctx.font="16px sans-serif";
+    ctx.fillStyle="#FFD700";ctx.fillRect(player.x,player.y,player.w,player.h);
+    ctx.fillStyle="#000";ctx.fillRect(player.x+4,player.y+6,8,8);ctx.fillRect(player.x+14,player.y+6,8,8);
+    ctx.fillStyle="#fff";ctx.font="16px sans-serif";
     ctx.fillText("Счёт: "+score,10,22);
     if(over){
-        ctx.fillStyle="red";
-        ctx.font="30px sans-serif";
+        ctx.fillStyle="red";ctx.font="30px sans-serif";
         ctx.fillText("GAME OVER",90,270);
         ctx.fillText("Рекорд: "+high,100,310);
         ctx.fillText("Обнови страницу",80,350);
     }
 }
 
-function loop(){
-    update();
-    draw();
-    requestAnimationFrame(loop);
-}
+function loop(){update();draw();requestAnimationFrame(loop);}
 loop();
 </script>
 </body>
