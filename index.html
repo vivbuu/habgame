@@ -24,64 +24,81 @@ canvas{border:3px solid #8B4513;border-radius:5px}
 <script>
 let c=document.getElementById("c"),ctx=c.getContext("2d");
 c.width=400;c.height=550;
-let player={x:185,y:490,w:30,h:30,vy:0,onGround:true};
+let player={x:185,y:500,w:30,h:30,vy:0,onGround:false};
 let platforms=[],score=0,gameOver=false,highScore=0;
-let keys={},spawnTimer=0,lastSpawnY=-100;
+let keys={},cameraY=0,lastPlatformY=500;
 
-platforms.push({x:170,y:520,w:60,h:12});
+// Создаём начальные платформы
+platforms.push({x:160,y:520,w:80,h:12});
+for(let i=1;i<12;i++){
+    platforms.push({
+        x:Math.random()*300+20,
+        y:520-i*45,
+        w:50+Math.random()*60,
+        h:12
+    });
+}
 
 document.addEventListener("keydown",e=>{keys[e.key]=1;e.preventDefault()});
 document.addEventListener("keyup",e=>{keys[e.key]=0});
 
 function restart(){
-    player.x=185;player.y=490;player.vy=0;score=0;gameOver=false;player.onGround=true;
-    platforms=[{x:170,y:520,w:60,h:12}];lastSpawnY=-100;
+    player.x=185;player.y=500;player.vy=0;score=0;gameOver=false;
+    platforms=[{x:160,y:520,w:80,h:12}];
+    for(let i=1;i<12;i++)platforms.push({x:Math.random()*300+20,y:520-i*45,w:50+Math.random()*60,h:12});
+    lastPlatformY=platforms[platforms.length-1].y;
+    cameraY=0;
     document.getElementById("rst").style.display="none";
 }
 
 function loop(){
     if(!gameOver){
-        player.vy+=0.5;
+        // Гравитация
+        player.vy+=0.6;
         player.y+=player.vy;
-        player.onGround=false;
+        
+        // Столкновение с платформами
         for(let p of platforms){
-            if(player.x<p.x+p.w&&player.x+player.w>p.x&&
-               player.y+player.h>p.y&&player.y+player.h<p.y+p.h+12&&player.vy>0){
+            if(player.vy>0&&player.x+player.w>p.x&&player.x<p.x+p.w&&
+               player.y+player.h>p.y&&player.y+player.h<p.y+p.h+15){
                 player.y=p.y-player.h;
-                player.vy=0;
+                player.vy=-9.5; // Прыжок
                 player.onGround=true;
+                break;
             }
         }
-        if((keys[" "]||keys["Space"])&&player.onGround){player.vy=-9;player.onGround=false;}
-        if(keys["a"])player.x-=5;if(keys["d"])player.x+=5;
+        
+        // Движение
+        if(keys["a"])player.x-=6;if(keys["d"])player.x+=6;
         if(player.x<-20)player.x=c.width;
         if(player.x>c.width+20)player.x=0;
-        if(player.y>c.height+50)gameOver=true;
-        let h=Math.floor((520-player.y)/10);
-        if(h>score)score=h;
-        if(player.y<300){
-            let diff=300-player.y;
-            player.y=300;
+        
+        // Камера
+        if(player.y<350){
+            let diff=350-player.y;
+            player.y=350;
             for(let p of platforms)p.y+=diff;
-            score+=Math.floor(diff/5);
+            cameraY+=diff;
+            score=Math.floor(cameraY/10);
         }
-        spawnTimer++;
-        if(spawnTimer>25){
-            spawnTimer=0;
-            let fromLeft=Math.random()<0.5;
-            let startX=fromLeft?-60:c.width+10;
-            let targetX=Math.random()*250+30;
-            // Разносим платформы по вертикали
-            let targetY=lastSpawnY-50-Math.random()*30;
-            platforms.push({x:startX,y:targetY,w:50+Math.random()*50,h:12,targetX:targetX,moving:true});
-            lastSpawnY=targetY;
+        
+        // Смерть
+        if(player.y>c.height+50)gameOver=true;
+        
+        // Генерация платформ
+        let topPlatform=platforms.reduce((a,b)=>a.y<b.y?a:b);
+        while(topPlatform.y> -50){
+            let px=Math.random()*320+20;
+            let py=topPlatform.y-40-Math.random()*30;
+            platforms.push({x:px,y:py,w:50+Math.random()*60,h:12});
+            topPlatform={x:0,y:py,w:0,h:0};
         }
-        for(let p of platforms){
-            if(p.moving){if(p.x<p.targetX)p.x+=3;else if(p.x>p.targetX)p.x-=3;else p.moving=false;}
-            p.y+=0.3;
-        }
-        platforms=platforms.filter(p=>p.y<c.height+80);
+        
+        // Удаление старых
+        platforms=platforms.filter(p=>p.y<c.height+100);
     }
+    
+    // Рисование
     ctx.fillStyle="#2a1a00";ctx.fillRect(0,0,c.width,c.height);
     ctx.fillStyle="#8B4513";
     for(let p of platforms)ctx.fillRect(p.x,p.y,p.w,p.h);
