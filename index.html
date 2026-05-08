@@ -24,7 +24,7 @@ canvas{border:3px solid #8B4513;border-radius:5px}
 <script>
 let c=document.getElementById("c"),ctx=c.getContext("2d");
 c.width=400;c.height=550;
-let player={x:185,y:500,w:30,h:30,vy:0,onGround:false};
+let player={x:185,y:478,w:30,h:30,vy:0,onGround:false};
 let platforms=[],score=0,gameOver=false,highScore=0;
 let keys={},spawnTimer=0;
 
@@ -35,39 +35,42 @@ document.addEventListener("keydown",e=>{keys[e.key]=1;e.preventDefault()});
 document.addEventListener("keyup",e=>{keys[e.key]=0});
 
 function restart(){
-    player.x=185;player.y=490;player.vy=0;score=0;gameOver=false;
+    player.x=185;player.y=478;player.vy=0;score=0;gameOver=false;
     platforms=[{x:170,y:490,w:60,h:12}];
     document.getElementById("rst").style.display="none";
 }
 
 function loop(){
     if(!gameOver){
-        player.vy+=0.3;
+        player.vy+=0.4;
         player.y+=player.vy;
         player.onGround=false;
         for(let p of platforms){
             if(player.x<p.x+p.w&&player.x+player.w>p.x&&
-               player.y+player.h>p.y&&player.y+player.h<p.y+p.h+8&&player.vy>0){
+               player.y+player.h>p.y&&player.y+player.h<p.y+p.h+10&&player.vy>0){
                 player.y=p.y-player.h;
                 player.vy=0;
                 player.onGround=true;
             }
         }
-        if((keys[" "]||keys["Space"])&&player.onGround){player.vy=-8;player.onGround=false;}
-        if(keys["a"])player.x-=4;if(keys["d"])player.x+=4;
+        if((keys[" "]||keys["Space"])&&player.onGround){player.vy=-9;player.onGround=false;}
+        if(keys["a"])player.x-=5;if(keys["d"])player.x+=5;
         if(player.x<-20)player.x=c.width;
         if(player.x>c.width+20)player.x=0;
-        if(player.y>c.height+30)gameOver=true;
+        if(player.y>c.height+50)gameOver=true;
         let h=Math.floor((490-player.y)/10);
         if(h>score)score=h;
         spawnTimer++;
-        if(spawnTimer>30){
+        // Платформы каждые 0.3 сек, не дальше 100px по вертикали от верхней платформы
+        if(spawnTimer>18){
             spawnTimer=0;
+            let topY=Math.min(...platforms.map(p=>p.y));
             let px=Math.random()*(c.width-100)+10;
-            platforms.push({x:px,y:-20,w:50+Math.random()*70,h:12});
+            let py=topY-60-Math.random()*40;
+            if(py<-20)py=-20;
+            platforms.push({x:px,y:py,w:50+Math.random()*70,h:12});
         }
-        // Очень медленное движение вниз
-        for(let p of platforms)p.y+=0.05;
+        for(let p of platforms)p.y+=0.08;
         platforms=platforms.filter(p=>p.y<c.height+50);
     }
     ctx.fillStyle="#2a1a00";ctx.fillRect(0,0,c.width,c.height);
