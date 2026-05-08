@@ -1,4 +1,4 @@
-here<!DOCTYPE html>
+<!DOCTYPE html>
 <html>
 <head>
 <meta charset="UTF-8">
@@ -26,7 +26,7 @@ let c=document.getElementById("c"),ctx=c.getContext("2d");
 c.width=400;c.height=550;
 let player={x:185,y:490,w:30,h:30,vy:0,onGround:true};
 let platforms=[],score=0,gameOver=false,highScore=0;
-let keys={},spawnTimer=0;
+let keys={},spawnTimer=0,lastSpawnY=-100;
 
 platforms.push({x:170,y:520,w:60,h:12});
 
@@ -35,7 +35,7 @@ document.addEventListener("keyup",e=>{keys[e.key]=0});
 
 function restart(){
     player.x=185;player.y=490;player.vy=0;score=0;gameOver=false;player.onGround=true;
-    platforms=[{x:170,y:520,w:60,h:12}];
+    platforms=[{x:170,y:520,w:60,h:12}];lastSpawnY=-100;
     document.getElementById("rst").style.display="none";
 }
 
@@ -57,27 +57,25 @@ function loop(){
         if(player.x<-20)player.x=c.width;
         if(player.x>c.width+20)player.x=0;
         if(player.y>c.height+50)gameOver=true;
-        // Счёт
         let h=Math.floor((520-player.y)/10);
         if(h>score)score=h;
-        // Камера
         if(player.y<300){
             let diff=300-player.y;
             player.y=300;
             for(let p of platforms)p.y+=diff;
             score+=Math.floor(diff/5);
         }
-        // Спавн
         spawnTimer++;
-        if(spawnTimer>20){
+        if(spawnTimer>25){
             spawnTimer=0;
             let fromLeft=Math.random()<0.5;
             let startX=fromLeft?-60:c.width+10;
             let targetX=Math.random()*250+30;
-            let targetY=-30-Math.random()*20;
+            // Разносим платформы по вертикали
+            let targetY=lastSpawnY-50-Math.random()*30;
             platforms.push({x:startX,y:targetY,w:50+Math.random()*50,h:12,targetX:targetX,moving:true});
+            lastSpawnY=targetY;
         }
-        // Движение
         for(let p of platforms){
             if(p.moving){if(p.x<p.targetX)p.x+=3;else if(p.x>p.targetX)p.x-=3;else p.moving=false;}
             p.y+=0.3;
