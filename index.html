@@ -2,50 +2,46 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no">
-<title>HabGame Test</title>
+<title>HabGame</title>
 <style>
-*{margin:0;padding:0;box-sizing:border-box}
-body{background:#0d1117;display:flex;flex-direction:column;align-items:center;justify-content:center;height:100vh;overflow:hidden}
-canvas{border:2px solid #4CAF50;border-radius:10px}
-#btns{display:flex;gap:10px;margin-top:10px}
-#btns button{width:70px;height:70px;font-size:30px;background:#161b22;color:#4CAF50;border:2px solid #4CAF50;border-radius:10px;touch-action:manipulation}
+body{background:#0d1117;display:flex;justify-content:center;align-items:center;height:100vh;margin:0}
+canvas{background:#111;border:2px solid #4CAF50}
 </style>
 </head>
 <body>
-<canvas id="c"></canvas>
-<div id="btns">
-<button onpointerdown="keys['w']=1" onpointerup="keys['w']=0">▲</button>
-<button onpointerdown="keys['a']=1" onpointerup="keys['a']=0">◀</button>
-<button onpointerdown="keys['s']=1" onpointerup="keys['s']=0">▼</button>
-<button onpointerdown="keys['d']=1" onpointerup="keys['d']=0">▶</button>
-</div>
+<canvas id="c" width="400" height="400"></canvas>
 <script>
 let c=document.getElementById("c"),ctx=c.getContext("2d");
-c.width=600;c.height=350;
-let speed=3,keys={},obstacles=[],me={x:100,y:200,color:"#4CAF50"};
-obstacles.push({x:200,y:100,w:60,h:20});
-obstacles.push({x:300,y:250,w:20,h:80});
-obstacles.push({x:450,y:150,w:40,h:40});
-
-function loop(){
-    if(keys["w"])me.y-=speed;if(keys["s"])me.y+=speed;
-    if(keys["a"])me.x-=speed;if(keys["d"])me.x+=speed;
-    if(me.x<0)me.x=0;if(me.x>c.width-24)me.x=c.width-24;
-    if(me.y<0)me.y=0;if(me.y>c.height-24)me.y=c.height-24;
-    for(let o of obstacles){
-        if(me.x<o.x+o.w&&me.x+24>o.x&&me.y<o.y+o.h&&me.y+24>o.y){
-            if(keys["d"])me.x=o.x-24;if(keys["a"])me.x=o.x+o.w;
-            if(keys["s"])me.y=o.y-24;if(keys["w"])me.y=o.y+o.h;
-        }
-    }
-    ctx.clearRect(0,0,c.width,c.height);
-    ctx.fillStyle="#555";for(let o of obstacles)ctx.fillRect(o.x,o.y,o.w,o.h);
-    ctx.fillStyle=me.color;ctx.fillRect(me.x,me.y,24,24);
-    ctx.fillStyle="#fff";ctx.font="12px sans-serif";ctx.fillText("Ты",me.x,me.y-5);
-    requestAnimationFrame(loop);
+let x=50,y=50,size=20;
+function draw(){
+    ctx.clearRect(0,0,400,400);
+    ctx.fillStyle="#4CAF50";
+    ctx.fillRect(x,y,size,size);
+    requestAnimationFrame(draw);
 }
-loop();
+document.addEventListener("keydown",function(e){
+    if(e.key=="w")y-=5;
+    if(e.key=="s")y+=5;
+    if(e.key=="a")x-=5;
+    if(e.key=="d")x+=5;
+});
+c.addEventListener("touchstart",function(e){
+    e.preventDefault();
+    let t=e.touches[0];
+    let rect=c.getBoundingClientRect();
+    let tx=t.clientX-rect.left;
+    let ty=t.clientY-rect.top;
+    x=tx-size/2;
+    y=ty-size/2;
+});
+c.addEventListener("touchmove",function(e){
+    e.preventDefault();
+    let t=e.touches[0];
+    let rect=c.getBoundingClientRect();
+    x=t.clientX-rect.left-size/2;
+    y=t.clientY-rect.top-size/2;
+});
+draw();
 </script>
 </body>
 </html>
