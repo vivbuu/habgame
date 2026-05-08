@@ -2,46 +2,47 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>HabGame</title>
+<title>HabGame Online</title>
 <style>
-body{background:#0d1117;display:flex;justify-content:center;align-items:center;height:100vh;margin:0}
+body{background:#0d1117;display:flex;flex-direction:column;align-items:center;justify-content:center;height:100vh;margin:0}
 canvas{background:#111;border:2px solid #4CAF50}
+#btns{display:flex;gap:10px;margin-top:10px}
+#btns button{width:60px;height:60px;font-size:24px;background:#161b22;color:#4CAF50;border:2px solid #4CAF50;border-radius:10px}
 </style>
 </head>
 <body>
 <canvas id="c" width="400" height="400"></canvas>
+<div id="btns">
+<button onpointerdown="keys['w']=1" onpointerup="keys['w']=0">W</button>
+<button onpointerdown="keys['a']=1" onpointerup="keys['a']=0">A</button>
+<button onpointerdown="keys['s']=1" onpointerup="keys['s']=0">S</button>
+<button onpointerdown="keys['d']=1" onpointerup="keys['d']=0">D</button>
+</div>
 <script>
 let c=document.getElementById("c"),ctx=c.getContext("2d");
-let x=50,y=50,size=20;
-function draw(){
-    ctx.clearRect(0,0,400,400);
-    ctx.fillStyle="#4CAF50";
-    ctx.fillRect(x,y,size,size);
-    requestAnimationFrame(draw);
+let me={x:50,y:50},friend={x:300,y:300},keys={};
+let ws=new WebSocket("wss://habgame.onrender.com");
+ws.onmessage=function(e){
+    let d=JSON.parse(e.data);
+    if(d.type==="move"){friend.x=d.x;friend.y=d.y;}
+};
+function sendPos(){
+    if(ws.readyState===WebSocket.OPEN)ws.send(JSON.stringify({type:"move",x:me.x,y:me.y}));
 }
-document.addEventListener("keydown",function(e){
-    if(e.key=="w")y-=5;
-    if(e.key=="s")y+=5;
-    if(e.key=="a")x-=5;
-    if(e.key=="d")x+=5;
-});
-c.addEventListener("touchstart",function(e){
-    e.preventDefault();
-    let t=e.touches[0];
-    let rect=c.getBoundingClientRect();
-    let tx=t.clientX-rect.left;
-    let ty=t.clientY-rect.top;
-    x=tx-size/2;
-    y=ty-size/2;
-});
-c.addEventListener("touchmove",function(e){
-    e.preventDefault();
-    let t=e.touches[0];
-    let rect=c.getBoundingClientRect();
-    x=t.clientX-rect.left-size/2;
-    y=t.clientY-rect.top-size/2;
-});
-draw();
+function loop(){
+    if(keys["w"])me.y-=3;if(keys["s"])me.y+=3;
+    if(keys["a"])me.x-=3;if(keys["d"])me.x+=3;
+    if(me.x<0)me.x=0;if(me.x>380)me.x=380;
+    if(me.y<0)me.y=0;if(me.y>380)me.y=380;
+    sendPos();
+    ctx.clearRect(0,0,400,400);
+    ctx.fillStyle="#4CAF50";ctx.fillRect(me.x,me.y,20,20);
+    ctx.fillStyle="#2196F3";ctx.fillRect(friend.x,friend.y,20,20);
+    ctx.fillStyle="#fff";ctx.font="12px sans-serif";
+    ctx.fillText("Ты",me.x,me.y-5);ctx.fillText("Друг",friend.x,friend.y-5);
+    requestAnimationFrame(loop);
+}
+loop();
 </script>
 </body>
 </html>
