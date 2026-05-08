@@ -2,44 +2,85 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>HabGame Online</title>
+<meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no">
+<title>Побег копателя</title>
 <style>
-body{background:#0d1117;display:flex;flex-direction:column;align-items:center;justify-content:center;height:100vh;margin:0}
-canvas{background:#111;border:2px solid #4CAF50}
-#btns{display:flex;gap:10px;margin-top:10px}
-#btns button{width:60px;height:60px;font-size:24px;background:#161b22;color:#4CAF50;border:2px solid #4CAF50;border-radius:10px}
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#1a0a00;display:flex;flex-direction:column;align-items:center;height:100vh;overflow:hidden}
+canvas{border:3px solid #8B4513;border-radius:5px}
+#btns{display:flex;gap:10px;margin-top:5px}
+#btns button{width:60px;height:60px;font-size:24px;background:#8B4513;color:#FFD700;border:2px solid #FFD700;border-radius:10px;touch-action:manipulation}
 </style>
 </head>
 <body>
-<canvas id="c" width="400" height="400"></canvas>
+<canvas id="c"></canvas>
 <div id="btns">
-<button onpointerdown="keys['w']=1" onpointerup="keys['w']=0">W</button>
-<button onpointerdown="keys['a']=1" onpointerup="keys['a']=0">A</button>
-<button onpointerdown="keys['s']=1" onpointerup="keys['s']=0">S</button>
-<button onpointerdown="keys['d']=1" onpointerup="keys['d']=0">D</button>
+<button onpointerdown="keys['a']=1" onpointerup="keys['a']=0">L</button>
+<button onpointerdown="keys[' ']=1" onpointerup="keys[' ']=0">JUMP</button>
+<button onpointerdown="keys['d']=1" onpointerup="keys['d']=0">R</button>
 </div>
 <script>
 let c=document.getElementById("c"),ctx=c.getContext("2d");
-let me={x:50,y:50},friend={x:300,y:300},keys={};
-let ws=new WebSocket("wss://habgame.onrender.com");
-ws.onmessage=function(e){
-    let d=JSON.parse(e.data);
-    if(d.type==="move"){friend.x=d.x;friend.y=d.y;}
-};
-function sendPos(){
-    if(ws.readyState===WebSocket.OPEN)ws.send(JSON.stringify({type:"move",x:me.x,y:me.y}));
+c.width=400;c.height=500;
+let player={x:180,y:400,w:30,h:30,vy:0,onGround:false};
+let platforms=[],score=0,gameOver=false,highScore=0;
+let keys={};
+
+platforms.push({x:150,y:450,w:100,h:15});
+for(let i=0;i<10;i++){
+    platforms.push({x:Math.random()*330,y:450-i*50-Math.random()*20,w:40+Math.random()*80,h:15});
 }
+platforms[0]={x:150,y:450,w:100,h:15};
+
+document.addEventListener("keydown",e=>{keys[e.key]=1;e.preventDefault()});
+document.addEventListener("keyup",e=>{keys[e.key]=0});
+
 function loop(){
-    if(keys["w"])me.y-=3;if(keys["s"])me.y+=3;
-    if(keys["a"])me.x-=3;if(keys["d"])me.x+=3;
-    if(me.x<0)me.x=0;if(me.x>380)me.x=380;
-    if(me.y<0)me.y=0;if(me.y>380)me.y=380;
-    sendPos();
-    ctx.clearRect(0,0,400,400);
-    ctx.fillStyle="#4CAF50";ctx.fillRect(me.x,me.y,20,20);
-    ctx.fillStyle="#2196F3";ctx.fillRect(friend.x,friend.y,20,20);
-    ctx.fillStyle="#fff";ctx.font="12px sans-serif";
-    ctx.fillText("Ты",me.x,me.y-5);ctx.fillText("Друг",friend.x,friend.y-5);
+    if(!gameOver){
+        player.vy+=0.6;
+        player.y+=player.vy;
+        player.onGround=false;
+        for(let p of platforms){
+            if(player.x<p.x+p.w&&player.x+player.w>p.x&&
+               player.y+player.h>p.y&&player.y+player.h<p.y+p.h+10&&player.vy>0){
+                player.y=p.y-player.h;
+                player.vy=0;
+                player.onGround=true;
+            }
+        }
+        if(keys[" "]&&player.onGround){player.vy=-10;player.onGround=false;}
+        if(keys["a"])player.x-=4;if(keys["d"])player.x+=4;
+        if(player.x<0)player.x=0;if(player.x>c.width-player.w)player.x=c.width-player.w;
+        if(player.y<c.height/2){
+            let diff=c.height/2-player.y;
+            player.y=c.height/2;
+            for(let p of platforms)p.y+=diff;
+            score+=Math.floor(diff);
+        }
+        if(player.y>c.height+50)gameOver=true;
+        for(let p of platforms){
+            if(p.y>c.height+100){p.y=-20;p.x=Math.random()*330;}
+        }
+    }
+    ctx.fillStyle="#2a1a00";ctx.fillRect(0,0,c.width,c.height);
+    ctx.fillStyle="#8B4513";
+    for(let p of platforms)ctx.fillRect(p.x,p.y,p.w,p.h);
+    ctx.fillStyle="#FFD700";ctx.fillRect(player.x,player.y,player.w,player.h);
+    ctx.fillStyle="#000";ctx.fillRect(player.x+5,player.y+8,8,8);ctx.fillRect(player.x+17,player.y+8,8,8);
+    ctx.fillStyle="#fff";ctx.font="18px sans-serif";
+    ctx.fillText("Счёт: "+score,10,25);
+    ctx.fillText("Рекорд: "+highScore,10,50);
+    if(gameOver){
+        if(score>highScore)highScore=score;
+        ctx.fillStyle="#f00";ctx.font="28px sans-serif";
+        ctx.fillText("GAME OVER",80,250);
+        ctx.fillStyle="#fff";ctx.font="18px sans-serif";
+        ctx.fillText("Нажми R",120,280);
+        if(keys["r"]){
+            player.y=400;player.vy=0;score=0;gameOver=false;
+            platforms.forEach((p,i)=>{p.y=450-i*50;});
+        }
+    }
     requestAnimationFrame(loop);
 }
 loop();
