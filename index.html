@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+here<!DOCTYPE html>
 <html>
 <head>
 <meta charset="UTF-8">
@@ -41,7 +41,7 @@ function restart(){
 
 function loop(){
     if(!gameOver){
-        player.vy+=0.4;
+        player.vy+=0.5;
         player.y+=player.vy;
         player.onGround=false;
         for(let p of platforms){
@@ -52,38 +52,38 @@ function loop(){
                 player.onGround=true;
             }
         }
-        if((keys[" "]||keys["Space"])&&player.onGround){player.vy=-8;player.onGround=false;}
-        if(keys["a"])player.x-=4;if(keys["d"])player.x+=4;
+        if((keys[" "]||keys["Space"])&&player.onGround){player.vy=-9;player.onGround=false;}
+        if(keys["a"])player.x-=5;if(keys["d"])player.x+=5;
         if(player.x<-20)player.x=c.width;
         if(player.x>c.width+20)player.x=0;
-        // Смерть
         if(player.y>c.height+50)gameOver=true;
+        // Счёт
+        let h=Math.floor((520-player.y)/10);
+        if(h>score)score=h;
         // Камера
-        if(player.y<c.height*0.4){
-            let diff=c.height*0.4-player.y;
-            player.y+=diff;
+        if(player.y<300){
+            let diff=300-player.y;
+            player.y=300;
             for(let p of platforms)p.y+=diff;
             score+=Math.floor(diff/5);
         }
-        // Спавн платформ
+        // Спавн
         spawnTimer++;
-        if(spawnTimer>25){
+        if(spawnTimer>20){
             spawnTimer=0;
             let fromLeft=Math.random()<0.5;
             let startX=fromLeft?-60:c.width+10;
             let targetX=Math.random()*250+30;
-            let topVisible=cameraY-20;
-            let targetY=topVisible-50-Math.random()*30; // всегда в пределах прыжка
+            let targetY=-30-Math.random()*20;
             platforms.push({x:startX,y:targetY,w:50+Math.random()*50,h:12,targetX:targetX,moving:true});
         }
-        // Движение платформ
+        // Движение
         for(let p of platforms){
-            if(p.moving){if(p.x<p.targetX)p.x+=2;else if(p.x>p.targetX)p.x-=2;else p.moving=false;}
-            p.y+=0.05;
+            if(p.moving){if(p.x<p.targetX)p.x+=3;else if(p.x>p.targetX)p.x-=3;else p.moving=false;}
+            p.y+=0.3;
         }
         platforms=platforms.filter(p=>p.y<c.height+80);
     }
-    // Рисование
     ctx.fillStyle="#2a1a00";ctx.fillRect(0,0,c.width,c.height);
     ctx.fillStyle="#8B4513";
     for(let p of platforms)ctx.fillRect(p.x,p.y,p.w,p.h);
@@ -100,7 +100,6 @@ function loop(){
     }
     requestAnimationFrame(loop);
 }
-let cameraY=0;
 loop();
 </script>
 </body>
