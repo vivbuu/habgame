@@ -28,7 +28,6 @@ let player={x:185,y:490,w:30,h:30,vy:0,onGround:true};
 let platforms=[],score=0,gameOver=false,highScore=0;
 let keys={},spawnTimer=0;
 
-// Стартовая платформа ПОД игроком
 platforms.push({x:170,y:520,w:60,h:12});
 
 document.addEventListener("keydown",e=>{keys[e.key]=1;e.preventDefault()});
@@ -61,14 +60,30 @@ function loop(){
         let h=Math.floor((520-player.y)/10);
         if(h>score)score=h;
         spawnTimer++;
-        if(spawnTimer>15){
+        if(spawnTimer>20){
             spawnTimer=0;
+            // Платформа выезжает слева или справа
+            let fromLeft=Math.random()<0.5;
+            let startX=fromLeft?-80:c.width+10;
+            let targetX=Math.random()*250+30; // случайная остановка в зоне досягаемости
             let topY=Math.min(...platforms.map(p=>p.y));
-            let px=Math.random()*(c.width-100)+10;
-            let py=topY-70-Math.random()*30;
-            platforms.push({x:px,y:py,w:50+Math.random()*70,h:12});
+            let targetY=topY-60-Math.random()*30;
+            if(targetY<-20)targetY=-20;
+            platforms.push({
+                x:startX,y:targetY,w:60+Math.random()*60,h:12,
+                targetX:targetX,moving:true
+            });
         }
-        for(let p of platforms)p.y+=0.06;
+        // Двигаем платформы
+        for(let p of platforms){
+            if(p.moving){
+                if(p.x<p.targetX)p.x+=3;
+                else if(p.x>p.targetX)p.x-=3;
+                else p.moving=false;
+            }
+        }
+        // Медленное движение вниз
+        for(let p of platforms)p.y+=0.04;
         platforms=platforms.filter(p=>p.y<c.height+50);
     }
     ctx.fillStyle="#2a1a00";ctx.fillRect(0,0,c.width,c.height);
