@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>HabGame Online</title>
+<title>HabGame</title>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
 body{background:#0d1117;display:flex;justify-content:center;align-items:center;height:100vh;overflow:hidden}
@@ -15,28 +15,22 @@ canvas{border:2px solid #4CAF50;border-radius:10px}
 <script>
 let c=document.getElementById("c"),ctx=c.getContext("2d");
 c.width=600;c.height=400;
-let speed=3,keys={},players={},obstacles=[],me=null;
-let myId=null;
+let speed=3,keys={},players={},obstacles=[],me=null,myId=null;
 obstacles.push({x:200,y:100,w:60,h:20});
 obstacles.push({x:300,y:250,w:20,h:80});
 obstacles.push({x:450,y:150,w:40,h:40});
 
-let socket=io("https://habgame.onrender.com");
-
-socket.on("init",d=>{
-    myId=d.id;
-    players[d.id]={x:d.x,y:d.y,color:"#4CAF50"};
-    me=players[d.id];
-});
-socket.on("join",d=>{players[d.id]={x:d.x,y:d.y,color:"#2196F3"};});
-socket.on("move",d=>{if(players[d.id]){players[d.id].x=d.x;players[d.id].y=d.y;}});
-socket.on("leave",d=>{delete players[d.id];});
-
+let ws=new WebSocket("wss://habgame.onrender.com");
+ws.onmessage=e=>{
+    let d=JSON.parse(e.data);
+    if(d.type==="init"){myId=d.id;players[d.id]={x:d.x,y:d.y,color:"#4CAF50"};me=players[d.id];}
+    else if(d.type==="join"){players[d.id]={x:d.x,y:d.y,color:"#2196F3"};}
+    else if(d.type==="move"){if(players[d.id]){players[d.id].x=d.x;players[d.id].y=d.y;}}
+    else if(d.type==="leave"){delete players[d.id];}
+};
+function send(){if(myId&&ws.readyState===WebSocket.OPEN)ws.send(JSON.stringify({type:"move",x:me.x,y:me.y}));}
 document.addEventListener("keydown",e=>{keys[e.key]=1});
 document.addEventListener("keyup",e=>{keys[e.key]=0});
-
-function sendPos(){if(myId)socket.emit("move",{x:me.x,y:me.y});}
-
 function loop(){
     if(me){
         if(keys["w"])me.y-=speed;if(keys["s"])me.y+=speed;
@@ -45,26 +39,21 @@ function loop(){
         if(me.y<0)me.y=0;if(me.y>c.height-24)me.y=c.height-24;
         for(let o of obstacles){
             if(me.x<o.x+o.w&&me.x+24>o.x&&me.y<o.y+o.h&&me.y+24>o.y){
-                if(keys["d"])me.x=o.x-24;
-                if(keys["a"])me.x=o.x+o.w;
-                if(keys["s"])me.y=o.y-24;
-                if(keys["w"])me.y=o.y+o.h;
+                if(keys["d"])me.x=o.x-24;if(keys["a"])me.x=o.x+o.w;
+                if(keys["s"])me.y=o.y-24;if(keys["w"])me.y=o.y+o.h;
             }
         }
-        sendPos();
+        send();
     }
     ctx.clearRect(0,0,c.width,c.height);
-    ctx.fillStyle="#555";
-    for(let o of obstacles)ctx.fillRect(o.x,o.y,o.w,o.h);
+    ctx.fillStyle="#555";for(let o of obstacles)ctx.fillRect(o.x,o.y,o.w,o.h);
     for(let id in players){
-        let p=players[id];
-        ctx.fillStyle=p.color;ctx.fillRect(p.x,p.y,24,24);
+        let p=players[id];ctx.fillStyle=p.color;ctx.fillRect(p.x,p.y,24,24);
         ctx.fillStyle="#fff";ctx.font="12px sans-serif";ctx.fillText(id===myId?"Ты":"Друг",p.x,p.y-5);
     }
     requestAnimationFrame(loop);
 }
 loop();
 </script>
-<script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
 </body>
 </html>
