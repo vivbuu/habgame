@@ -2,19 +2,27 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no">
 <title>HabGame</title>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
-body{background:#0d1117;display:flex;justify-content:center;align-items:center;height:100vh;overflow:hidden}
+body{background:#0d1117;display:flex;flex-direction:column;align-items:center;justify-content:center;height:100vh;overflow:hidden}
 canvas{border:2px solid #4CAF50;border-radius:10px}
+#btns{display:flex;gap:10px;margin-top:10px}
+#btns button{width:70px;height:70px;font-size:30px;background:#161b22;color:#4CAF50;border:2px solid #4CAF50;border-radius:10px;touch-action:manipulation}
 </style>
 </head>
 <body>
 <canvas id="c"></canvas>
+<div id="btns">
+<button onpointerdown="keys['w']=1" onpointerup="keys['w']=0">▲</button>
+<button onpointerdown="keys['a']=1" onpointerup="keys['a']=0">◀</button>
+<button onpointerdown="keys['s']=1" onpointerup="keys['s']=0">▼</button>
+<button onpointerdown="keys['d']=1" onpointerup="keys['d']=0">▶</button>
+</div>
 <script>
 let c=document.getElementById("c"),ctx=c.getContext("2d");
-c.width=600;c.height=400;
+c.width=600;c.height=350;
 let speed=3,keys={},players={},obstacles=[],me=null,myId=null;
 obstacles.push({x:200,y:100,w:60,h:20});
 obstacles.push({x:300,y:250,w:20,h:80});
