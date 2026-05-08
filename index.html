@@ -26,7 +26,7 @@ let c=document.getElementById("c"),ctx=c.getContext("2d");
 c.width=400;c.height=550;
 let player={x:185,y:490,w:30,h:30,vy:0,onGround:true};
 let platforms=[],score=0,gameOver=false,highScore=0;
-let keys={},spawnTimer=0;
+let keys={},spawnTimer=0,cameraY=0;
 
 platforms.push({x:170,y:520,w:60,h:12});
 
@@ -35,7 +35,7 @@ document.addEventListener("keyup",e=>{keys[e.key]=0});
 
 function restart(){
     player.x=185;player.y=490;player.vy=0;score=0;gameOver=false;player.onGround=true;
-    platforms=[{x:170,y:520,w:60,h:12}];
+    platforms=[{x:170,y:520,w:60,h:12}];cameraY=0;
     document.getElementById("rst").style.display="none";
 }
 
@@ -56,37 +56,36 @@ function loop(){
         if(keys["a"])player.x-=5;if(keys["d"])player.x+=5;
         if(player.x<-20)player.x=c.width;
         if(player.x>c.width+20)player.x=0;
-        if(player.y>c.height+50)gameOver=true;
-        let h=Math.floor((520-player.y)/10);
+        if(player.y>c.height+100)gameOver=true;
+        // Камера следует за игроком, когда он высоко
+        if(player.y<c.height/2){
+            cameraY+=(c.height/2-player.y)*0.1;
+            player.y+=(c.height/2-player.y)*0.1;
+            for(let p of platforms)p.y+=(c.height/2-player.y)*0.1;
+            score+=Math.floor((c.height/2-player.y)*0.1);
+        }
+        let h=Math.floor((520-player.y-cameraY)/10);
         if(h>score)score=h;
         spawnTimer++;
         if(spawnTimer>20){
             spawnTimer=0;
-            // Платформа выезжает слева или справа
             let fromLeft=Math.random()<0.5;
             let startX=fromLeft?-80:c.width+10;
-            let targetX=Math.random()*250+30; // случайная остановка в зоне досягаемости
+            let targetX=Math.random()*250+30;
             let topY=Math.min(...platforms.map(p=>p.y));
             let targetY=topY-60-Math.random()*30;
-            if(targetY<-20)targetY=-20;
-            platforms.push({
-                x:startX,y:targetY,w:60+Math.random()*60,h:12,
-                targetX:targetX,moving:true
-            });
+            platforms.push({x:startX,y:targetY,w:60+Math.random()*60,h:12,targetX:targetX,moving:true});
         }
-        // Двигаем платформы
         for(let p of platforms){
-            if(p.moving){
-                if(p.x<p.targetX)p.x+=3;
-                else if(p.x>p.targetX)p.x-=3;
-                else p.moving=false;
-            }
+            if(p.moving){if(p.x<p.targetX)p.x+=3;else if(p.x>p.targetX)p.x-=3;else p.moving=false;}
+            p.y+=0.04;
         }
-        // Медленное движение вниз
-        for(let p of platforms)p.y+=0.04;
-        platforms=platforms.filter(p=>p.y<c.height+50);
+        platforms=platforms.filter(p=>p.y<c.height+100);
     }
     ctx.fillStyle="#2a1a00";ctx.fillRect(0,0,c.width,c.height);
+    ctx.fillStyle="#8B4513";
+    for(let p of platforms)ctx.fillRect(p.x,p.y-player.y+cameraY+player.y,p.y-player.y+cameraY+player.y,...);
+    // Упрощаем: рисуем относительно игрока
     ctx.fillStyle="#8B4513";
     for(let p of platforms)ctx.fillRect(p.x,p.y,p.w,p.h);
     ctx.fillStyle="#FFD700";ctx.fillRect(player.x,player.y,player.w,player.h);
