@@ -1,109 +1,193 @@
 <!DOCTYPE html>
 <html>
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Побег копателя</title>
-<style>
-*{margin:0;padding:0}body{background:#1a0a00;display:flex;flex-direction:column;align-items:center;height:100vh;overflow:hidden}
-canvas{border:3px solid #8B4513;margin-top:5px}
-#btns{display:flex;gap:10px;margin-top:5px}
-#btns button{width:70px;height:70px;font-size:24px;background:#8B4513;color:#FFD700;border:2px solid #FFD700;border-radius:10px;touch-action:manipulation}
-</style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Змейка</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 10px;
+            background: #1a1a2e;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            box-sizing: border-box;
+            font-family: monospace;
+            touch-action: none;
+        }
+        canvas {
+            border: 2px solid #e94560;
+            border-radius: 8px;
+            background: #16213e;
+        }
+        #score {
+            color: #e94560;
+            font-size: 24px;
+            margin-bottom: 10px;
+            font-weight: bold;
+        }
+        #controls {
+            display: grid;
+            grid-template-columns: 80px 80px 80px;
+            grid-template-rows: 80px 80px 80px;
+            gap: 5px;
+            margin-top: 15px;
+        }
+        .btn {
+            background: #e94560;
+            border: none;
+            border-radius: 10px;
+            font-size: 30px;
+            color: white;
+            cursor: pointer;
+            user-select: none;
+        }
+        .btn:active {
+            background: #ff6b6b;
+        }
+    </style>
 </head>
 <body>
-<canvas id="c" width="400" height="550"></canvas>
-<div id="btns">
-<button onpointerdown="left=1" onpointerup="left=0">L</button>
-<button onpointerdown="jump=1" onpointerup="jump=0">J</button>
-<button onpointerdown="right=1" onpointerup="right=0">R</button>
-</div>
-<script>
-let ctx=c.getContext("2d");
-let W=400,H=550;
-let player={x:185,y:500,w:26,h:30,vy:0};
-let platforms=[],score=0,high=0,over=false;
-let left=0,right=0,jump=0,camY=0,jumped=false;
+    <div id="score">Счёт: 0</div>
+    <canvas id="game"></canvas>
+    <div id="controls">
+        <div></div>
+        <button class="btn" ontouchstart="changeDir(0,-1)" onclick="changeDir(0,-1)">▲</button>
+        <div></div>
+        <button class="btn" ontouchstart="changeDir(-1,0)" onclick="changeDir(-1,0)">◄</button>
+        <button class="btn" style="background:#16213e;font-size:16px;" onclick="resetGame()">↻</button>
+        <button class="btn" ontouchstart="changeDir(1,0)" onclick="changeDir(1,0)">►</button>
+        <div></div>
+        <button class="btn" ontouchstart="changeDir(0,1)" onclick="changeDir(0,1)">▼</button>
+        <div></div>
+    </div>
 
-// Стартовые платформы
-platforms.push({x:160,y:515,w:80,h:10});
-for(let i=1;i<15;i++){
-    platforms.push({
-        x:Math.random()*320+20,
-        y:515-i*42,
-        w:50+Math.random()*70,
-        h:10
-    });
-}
+    <script>
+        const canvas = document.getElementById('game');
+        const ctx = canvas.getContext('2d');
+        const scoreEl = document.getElementById('score');
 
-document.onkeydown=e=>{
-    if(e.key=="a"||e.key=="A")left=1;
-    if(e.key=="d"||e.key=="D")right=1;
-    if(e.key==" "||e.key=="Space")jump=1;
-    e.preventDefault();
-};
-document.onkeyup=e=>{
-    if(e.key=="a"||e.key=="A")left=0;
-    if(e.key=="d"||e.key=="D")right=0;
-    if(e.key==" "||e.key=="Space"){jump=0;jumped=false;}
-};
+        const size = 20;
+        const cols = 16;
+        const rows = 20;
+        canvas.width = cols * size;
+        canvas.height = rows * size;
 
-function update(){
-    if(over)return;
-    player.vy+=0.5;
-    player.y+=player.vy;
-    let onPlatform=false;
-    for(let p of platforms){
-        if(player.vy>0&&player.x<p.x+p.w&&player.x+player.w>p.x&&
-           player.y+player.h>p.y&&player.y+player.h<p.y+15){
-            player.y=p.y-player.h;
-            player.vy=-9.5;
-            onPlatform=true;
-            break;
+        let snake, food, dir, nextDir, score, gameOver, speed, gameLoop;
+
+        function resetGame() {
+            snake = [{x: 8, y: 10}, {x: 7, y: 10}, {x: 6, y: 10}];
+            dir = {x: 1, y: 0};
+            nextDir = {x: 1, y: 0};
+            score = 0;
+            gameOver = false;
+            speed = 120;
+            scoreEl.textContent = 'Счёт: 0';
+            spawnFood();
+            if (gameLoop) clearInterval(gameLoop);
+            gameLoop = setInterval(update, speed);
         }
-    }
-    if(!onPlatform)player.onGround=false;
-    if(left)player.x-=5;
-    if(right)player.x+=5;
-    if(player.x<-20)player.x=W;
-    if(player.x>W+20)player.x=0;
-    if(player.y<350){
-        let d=350-player.y;
-        player.y=350;
-        platforms.forEach(p=>p.y+=d);
-        camY+=d;
-    }
-    if(player.y>H+60)over=true;
-    score=Math.floor(camY/5);
-    if(score>high)high=score;
-    let minY=Math.min(...platforms.map(p=>p.y));
-    while(minY>-40){
-        let px=Math.random()*300+30;
-        let py=minY-38-Math.random()*22;
-        platforms.push({x:px,y:py,w:50+Math.random()*70,h:10});
-        minY=py;
-    }
-    platforms=platforms.filter(p=>p.y<H+80);
-}
 
-function draw(){
-    ctx.fillStyle="#2a1a00";ctx.fillRect(0,0,W,H);
-    ctx.fillStyle="#8B4513";
-    for(let p of platforms)ctx.fillRect(p.x,p.y,p.w,p.h);
-    ctx.fillStyle="#FFD700";ctx.fillRect(player.x,player.y,player.w,player.h);
-    ctx.fillStyle="#000";ctx.fillRect(player.x+4,player.y+6,8,8);ctx.fillRect(player.x+14,player.y+6,8,8);
-    ctx.fillStyle="#fff";ctx.font="16px sans-serif";
-    ctx.fillText("Счёт: "+score,10,22);
-    if(over){
-        ctx.fillStyle="red";ctx.font="30px sans-serif";
-        ctx.fillText("GAME OVER",90,270);
-        ctx.fillText("Рекорд: "+high,100,310);
-        ctx.fillText("Обнови страницу",80,350);
-    }
-}
+        function spawnFood() {
+            do {
+                food = {
+                    x: Math.floor(Math.random() * cols),
+                    y: Math.floor(Math.random() * rows)
+                };
+            } while (snake.some(s => s.x === food.x && s.y === food.y));
+        }
 
-function loop(){update();draw();requestAnimationFrame(loop);}
-loop();
-</script>
+        function changeDir(dx, dy) {
+            if (gameOver) return;
+            if (dir.x + dx === 0 && dir.y + dy === 0) return;
+            nextDir = {x: dx, y: dy};
+        }
+
+        function update() {
+            if (gameOver) return;
+            dir = {...nextDir};
+            const head = {x: snake[0].x + dir.x, y: snake[0].y + dir.y};
+
+            if (head.x < 0 || head.x >= cols || head.y < 0 || head.y >= rows) {
+                endGame();
+                return;
+            }
+            if (snake.some(s => s.x === head.x && s.y === head.y)) {
+                endGame();
+                return;
+            }
+
+            snake.unshift(head);
+
+            if (head.x === food.x && head.y === food.y) {
+                score += 10;
+                scoreEl.textContent = 'Счёт: ' + score;
+                spawnFood();
+                if (speed > 50) { speed -= 2; clearInterval(gameLoop); gameLoop = setInterval(update, speed); }
+            } else {
+                snake.pop();
+            }
+
+            draw();
+        }
+
+        function endGame() {
+            gameOver = true;
+            clearInterval(gameLoop);
+            ctx.fillStyle = 'rgba(0,0,0,0.7)';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            ctx.fillStyle = '#e94560';
+            ctx.font = '20px monospace';
+            ctx.textAlign = 'center';
+            ctx.fillText('Игра окончена!', canvas.width/2, canvas.height/2 - 10);
+            ctx.font = '14px monospace';
+            ctx.fillText('Нажми ↻', canvas.width/2, canvas.height/2 + 20);
+        }
+
+        function draw() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // Еда
+            ctx.fillStyle = '#f0c929';
+            ctx.beginPath();
+            ctx.arc(food.x * size + size/2, food.y * size + size/2, size/2 - 2, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Змейка
+            snake.forEach((s, i) => {
+                const alpha = 1 - (i / (snake.length + 10)) * 0.5;
+                ctx.fillStyle = i === 0 ? '#00ff88' : `rgba(0, 200, 100, ${alpha})`;
+                ctx.fillRect(s.x * size + 1, s.y * size + 1, size - 2, size - 2);
+            });
+        }
+
+        // Свайпы
+        let touchStartX = 0, touchStartY = 0;
+        canvas.addEventListener('touchstart', e => {
+            touchStartX = e.touches[0].clientX;
+            touchStartY = e.touches[0].clientY;
+        });
+        canvas.addEventListener('touchend', e => {
+            const dx = e.changedTouches[0].clientX - touchStartX;
+            const dy = e.changedTouches[0].clientY - touchStartY;
+            if (Math.abs(dx) > Math.abs(dy)) {
+                changeDir(dx > 0 ? 1 : -1, 0);
+            } else {
+                changeDir(0, dy > 0 ? 1 : -1);
+            }
+        });
+
+        // Клавиатура
+        document.addEventListener('keydown', e => {
+            const keys = {ArrowUp: [0,-1], ArrowDown: [0,1], ArrowLeft: [-1,0], ArrowRight: [1,0]};
+            if (keys[e.key]) changeDir(keys[e.key][0], keys[e.key][1]);
+        });
+
+        resetGame();
+        draw();
+    </script>
 </body>
 </html>
