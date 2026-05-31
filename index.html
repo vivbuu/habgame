@@ -16,7 +16,7 @@
             height: 100vh;
             box-sizing: border-box;
             font-family: monospace;
-            touch-action: none;
+            touch-action: manipulation;
         }
         canvas {
             border: 2px solid #e94560;
@@ -67,7 +67,7 @@
 
     <script>
         const canvas = document.getElementById('game');
-        const ctx = canvas.getContext('2d');
+        const ctx = canvas.getContext('2d', { alpha: false });
         const scoreEl = document.getElementById('score');
 
         const size = 20;
@@ -188,6 +188,11 @@
 
         resetGame();
         draw();
+
+        document.querySelectorAll('.btn').forEach(btn => {
+            btn.addEventListener('touchstart', e => e.preventDefault());
+        });
+        
     </script>
 </body>
 </html>
