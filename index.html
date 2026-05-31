@@ -1,74 +1,115 @@
 <!DOCTYPE html>
-<html>
+<html lang="ru">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>Змейка</title>
+    <title>Змейка Pro</title>
     <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
         body {
-            margin: 0;
-            padding: 10px;
             background: #1a1a2e;
             display: flex;
             flex-direction: column;
             align-items: center;
             justify-content: center;
             height: 100vh;
-            box-sizing: border-box;
-            font-family: monospace;
+            font-family: 'Courier New', monospace;
             touch-action: manipulation;
+            color: #e94560;
         }
+        #score, #best { font-size: 20px; margin: 4px 0; }
+        #best { color: #f0c929; }
         canvas {
             border: 2px solid #e94560;
             border-radius: 8px;
             background: #16213e;
-        }
-        #score {
-            color: #e94560;
-            font-size: 24px;
-            margin-bottom: 10px;
-            font-weight: bold;
+            max-width: 100%;
+            height: auto;
         }
         #controls {
             display: grid;
-            grid-template-columns: 80px 80px 80px;
-            grid-template-rows: 80px 80px 80px;
-            gap: 5px;
-            margin-top: 15px;
+            grid-template-columns: 70px 70px 70px;
+            grid-template-rows: 70px 70px 70px;
+            gap: 4px;
+            margin-top: 10px;
         }
         .btn {
             background: #e94560;
             border: none;
             border-radius: 10px;
-            font-size: 30px;
+            font-size: 28px;
             color: white;
             cursor: pointer;
             user-select: none;
+            -webkit-tap-highlight-color: transparent;
         }
-        .btn:active {
-            background: #ff6b6b;
+        .btn:active { background: #ff6b6b; }
+        #mode-select {
+            margin-top: 10px;
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+            justify-content: center;
         }
+        .mode-btn {
+            background: #16213e;
+            border: 1px solid #e94560;
+            color: #e94560;
+            padding: 6px 12px;
+            border-radius: 6px;
+            font-family: monospace;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        .mode-btn.active { background: #e94560; color: white; }
+        #skin-select {
+            margin-top: 8px;
+            display: flex;
+            gap: 6px;
+        }
+        .skin-btn {
+            width: 24px; height: 24px;
+            border-radius: 50%;
+            border: 2px solid transparent;
+            cursor: pointer;
+        }
+        .skin-btn.active { border-color: white; }
     </style>
 </head>
 <body>
     <div id="score">Счёт: 0</div>
+    <div id="best"></div>
     <canvas id="game"></canvas>
     <div id="controls">
         <div></div>
-        <button class="btn" ontouchstart="changeDir(0,-1)" onclick="changeDir(0,-1)">▲</button>
+        <button class="btn">▲</button>
         <div></div>
-        <button class="btn" ontouchstart="changeDir(-1,0)" onclick="changeDir(-1,0)">◄</button>
-        <button class="btn" style="background:#16213e;font-size:16px;" onclick="resetGame()">↻</button>
-        <button class="btn" ontouchstart="changeDir(1,0)" onclick="changeDir(1,0)">►</button>
+        <button class="btn">◄</button>
+        <button class="btn" style="background:#16213e;font-size:16px;">↻</button>
+        <button class="btn">►</button>
         <div></div>
-        <button class="btn" ontouchstart="changeDir(0,1)" onclick="changeDir(0,1)">▼</button>
+        <button class="btn">▼</button>
         <div></div>
+    </div>
+    <div id="mode-select">
+        <button class="mode-btn active" data-mode="classic">Классика</button>
+        <button class="mode-btn" data-mode="infinite">Бесконечная</button>
+        <button class="mode-btn" data-mode="speed">Ускорение</button>
+        <button class="mode-btn" data-mode="maze">Лабиринт</button>
+    </div>
+    <div id="skin-select">
+        <button class="skin-btn active" style="background:#00ff88;" data-skin="#00ff88"></button>
+        <button class="skin-btn" style="background:#ff6b6b;" data-skin="#ff6b6b"></button>
+        <button class="skin-btn" style="background:#ffd93d;" data-skin="#ffd93d"></button>
+        <button class="skin-btn" style="background:#6bcbff;" data-skin="#6bcbff"></button>
+        <button class="skin-btn" style="background:#ff88ff;" data-skin="#ff88ff"></button>
     </div>
 
     <script>
         const canvas = document.getElementById('game');
         const ctx = canvas.getContext('2d', { alpha: false });
         const scoreEl = document.getElementById('score');
+        const bestEl = document.getElementById('best');
 
         const size = 20;
         const cols = 16;
@@ -77,6 +118,11 @@
         canvas.height = rows * size;
 
         let snake, food, dir, nextDir, score, gameOver, speed, gameLoop;
+        let mode = 'classic';
+        let skin = '#00ff88';
+        let walls = [];
+        let best = parseInt(localStorage.getItem('snakeBest') || '0');
+        bestEl.textContent = 'Лучший: ' + best;
 
         function resetGame() {
             snake = [{x: 8, y: 10}, {x: 7, y: 10}, {x: 6, y: 10}];
@@ -84,8 +130,17 @@
             nextDir = {x: 1, y: 0};
             score = 0;
             gameOver = false;
-            speed = 120;
+            speed = mode === 'speed' ? 80 : 120;
             scoreEl.textContent = 'Счёт: 0';
+            walls = [];
+            if (mode === 'maze') {
+                for (let i = 0; i < 12; i++) {
+                    walls.push({
+                        x: Math.floor(Math.random() * cols),
+                        y: Math.floor(Math.random() * rows)
+                    });
+                }
+            }
             spawnFood();
             if (gameLoop) clearInterval(gameLoop);
             gameLoop = setInterval(update, speed);
@@ -93,11 +148,9 @@
 
         function spawnFood() {
             do {
-                food = {
-                    x: Math.floor(Math.random() * cols),
-                    y: Math.floor(Math.random() * rows)
-                };
-            } while (snake.some(s => s.x === food.x && s.y === food.y));
+                food = { x: Math.floor(Math.random() * cols), y: Math.floor(Math.random() * rows) };
+            } while (snake.some(s => s.x === food.x && s.y === food.y) ||
+                     walls.some(w => w.x === food.x && w.y === food.y));
         }
 
         function changeDir(dx, dy) {
@@ -111,14 +164,15 @@
             dir = {...nextDir};
             const head = {x: snake[0].x + dir.x, y: snake[0].y + dir.y};
 
-            if (head.x < 0 || head.x >= cols || head.y < 0 || head.y >= rows) {
-                endGame();
-                return;
+            if (mode !== 'infinite') {
+                if (head.x < 0 || head.x >= cols || head.y < 0 || head.y >= rows) { endGame(); return; }
+                if (walls.some(w => w.x === head.x && w.y === head.y)) { endGame(); return; }
+            } else {
+                head.x = (head.x + cols) % cols;
+                head.y = (head.y + rows) % rows;
             }
-            if (snake.some(s => s.x === head.x && s.y === head.y)) {
-                endGame();
-                return;
-            }
+
+            if (snake.some(s => s.x === head.x && s.y === head.y)) { endGame(); return; }
 
             snake.unshift(head);
 
@@ -126,7 +180,11 @@
                 score += 10;
                 scoreEl.textContent = 'Счёт: ' + score;
                 spawnFood();
-                if (speed > 50) { speed -= 2; clearInterval(gameLoop); gameLoop = setInterval(update, speed); }
+                if (mode === 'speed' && speed > 40) {
+                    speed -= 3;
+                    clearInterval(gameLoop);
+                    gameLoop = setInterval(update, speed);
+                }
             } else {
                 snake.pop();
             }
@@ -137,6 +195,11 @@
         function endGame() {
             gameOver = true;
             clearInterval(gameLoop);
+            if (score > best) {
+                best = score;
+                localStorage.setItem('snakeBest', best);
+                bestEl.textContent = 'Лучший: ' + best;
+            }
             ctx.fillStyle = 'rgba(0,0,0,0.7)';
             ctx.fillRect(0, 0, canvas.width, canvas.height);
             ctx.fillStyle = '#e94560';
@@ -144,11 +207,15 @@
             ctx.textAlign = 'center';
             ctx.fillText('Игра окончена!', canvas.width/2, canvas.height/2 - 10);
             ctx.font = '14px monospace';
-            ctx.fillText('Нажми ↻', canvas.width/2, canvas.height/2 + 20);
+            ctx.fillText('R / ↻ — заново', canvas.width/2, canvas.height/2 + 20);
         }
 
         function draw() {
             ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // Стены
+            ctx.fillStyle = '#333';
+            walls.forEach(w => ctx.fillRect(w.x * size + 1, w.y * size + 1, size - 2, size - 2));
 
             // Еда
             ctx.fillStyle = '#f0c929';
@@ -159,10 +226,34 @@
             // Змейка
             snake.forEach((s, i) => {
                 const alpha = 1 - (i / (snake.length + 10)) * 0.5;
-                ctx.fillStyle = i === 0 ? '#00ff88' : `rgba(0, 200, 100, ${alpha})`;
+                ctx.fillStyle = i === 0 ? skin : skin.replace(')', `, ${alpha})`).replace('rgb', 'rgba');
+                if (skin.startsWith('#')) {
+                    ctx.fillStyle = i === 0 ? skin : skin + Math.floor(alpha * 255).toString(16).padStart(2, '0');
+                }
                 ctx.fillRect(s.x * size + 1, s.y * size + 1, size - 2, size - 2);
             });
         }
+
+        // Кнопки
+        document.querySelectorAll('#controls .btn').forEach((btn, i) => {
+            const dirs = [null, [0,-1], null, [-1,0], null, [1,0], null, [0,1], null];
+            btn.addEventListener('click', () => {
+                if (i === 4) resetGame();
+                else if (dirs[i]) changeDir(dirs[i][0], dirs[i][1]);
+            });
+            btn.addEventListener('touchstart', e => {
+                e.preventDefault();
+                if (i === 4) resetGame();
+                else if (dirs[i]) changeDir(dirs[i][0], dirs[i][1]);
+            });
+        });
+
+        // Клавиатура
+        document.addEventListener('keydown', e => {
+            const keys = {ArrowUp: [0,-1], ArrowDown: [0,1], ArrowLeft: [-1,0], ArrowRight: [1,0]};
+            if (keys[e.key]) changeDir(keys[e.key][0], keys[e.key][1]);
+            if (e.key === 'r' || e.key === 'R' || e.key === ' ') { e.preventDefault(); resetGame(); }
+        });
 
         // Свайпы
         let touchStartX = 0, touchStartY = 0;
@@ -173,26 +264,31 @@
         canvas.addEventListener('touchend', e => {
             const dx = e.changedTouches[0].clientX - touchStartX;
             const dy = e.changedTouches[0].clientY - touchStartY;
-            if (Math.abs(dx) > Math.abs(dy)) {
-                changeDir(dx > 0 ? 1 : -1, 0);
-            } else {
-                changeDir(0, dy > 0 ? 1 : -1);
-            }
+            if (Math.abs(dx) > Math.abs(dy)) changeDir(dx > 0 ? 1 : -1, 0);
+            else changeDir(0, dy > 0 ? 1 : -1);
         });
 
-        // Клавиатура
-        document.addEventListener('keydown', e => {
-            const keys = {ArrowUp: [0,-1], ArrowDown: [0,1], ArrowLeft: [-1,0], ArrowRight: [1,0]};
-            if (keys[e.key]) changeDir(keys[e.key][0], keys[e.key][1]);
+        // Режимы
+        document.querySelectorAll('.mode-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('.mode-btn').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                mode = btn.dataset.mode;
+                resetGame();
+            });
+        });
+
+        // Скины
+        document.querySelectorAll('.skin-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('.skin-btn').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                skin = btn.dataset.skin;
+            });
         });
 
         resetGame();
         draw();
-
-        document.querySelectorAll('.btn').forEach(btn => {
-            btn.addEventListener('touchstart', e => e.preventDefault());
-        });
-        
     </script>
 </body>
 </html>
